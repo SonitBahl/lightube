@@ -13,4 +13,10 @@ fi
 
 source "$CONFIG"
 
+source "$(dirname "$0")/lib/search.sh"
+
 echo "Lightube - Terminal YouTube Player"
+
+read -p "Search YouTube: " query
+
+search "$query"
