@@ -2,21 +2,33 @@
 
 CONFIG="$HOME/.config/lightube.conf"
 
-if [ ! -f "$CONFIG" ]; then
-    mkdir -p "$HOME/.config"
-    cat <<EOF > "$CONFIG"
-RESULTS=5
-MAX_RESOLUTION=1080
-PLAYER=mpv
-EOF
-fi
-
-source "$CONFIG"
+[ -f "$CONFIG" ] && source "$CONFIG"
 
 source "$(dirname "$0")/lib/search.sh"
+source "$(dirname "$0")/lib/menu.sh"
 
 echo "Lightube - Terminal YouTube Player"
 
 read -p "Search YouTube: " query
 
-search "$query"
+echo ""
+echo "Fetching videos..."
+echo ""
+
+mapfile -t results < <(search "$query")
+
+if [ ${#results[@]} -eq 0 ]; then
+    echo "No results found."
+    exit
+fi
+
+selected=$(printf "%s\n" "${results[@]}" | show_menu)
+
+[ -z "$selected" ] && exit
+
+IFS=$'\t' read -r title url channel views likes comments duration <<< "$selected"
+
+echo ""
+echo "Selected:"
+echo "$title"
+echo "$url"
