@@ -1,3 +1,16 @@
 #!/bin/bash
 
+CONFIG="$HOME/.config/lightube.conf"
+
+if [ ! -f "$CONFIG" ]; then
+    mkdir -p "$HOME/.config"
+    cat <<EOF > "$CONFIG"
+RESULTS=5
+MAX_RESOLUTION=1080
+PLAYER=mpv
+EOF
+fi
+
+source "$CONFIG"
+
 echo "Lightube - Terminal YouTube Player"
