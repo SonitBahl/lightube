@@ -6,6 +6,7 @@ CONFIG="$HOME/.config/lightube.conf"
 
 source "$(dirname "$0")/lib/search.sh"
 source "$(dirname "$0")/lib/menu.sh"
+source "$(dirname "$0")/lib/player.sh"
 
 echo "Lightube - Terminal YouTube Player"
 
@@ -22,13 +23,19 @@ if [ ${#results[@]} -eq 0 ]; then
     exit
 fi
 
-selected=$(printf "%s\n" "${results[@]}" | show_menu)
+while true; do
+    selected=$(printf "%s\n" "${results[@]}" | show_menu)
 
-[ -z "$selected" ] && exit
+    # If user cancels the selection menu, exit
+    [ -z "$selected" ] && exit
 
-IFS=$'\t' read -r title url channel views likes comments duration <<< "$selected"
+    IFS=$'\t' read -r title url channel views likes comments duration <<< "$selected"
 
-echo ""
-echo "Selected:"
-echo "$title"
-echo "$url"
+    echo ""
+    echo "Selected:"
+    echo "$title"
+    echo "$url"
+
+    # Show action menu for the selected video
+    video_action_menu "$url"
+done
