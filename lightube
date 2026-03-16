@@ -29,7 +29,7 @@ while true; do
     # If user cancels the selection menu, exit
     [ -z "$selected" ] && exit
 
-    IFS=$'\t' read -r title url channel views likes comments duration <<< "$selected"
+    IFS=$'\t' read -r title url channel subs views likes comments duration channel_url desc_short tags <<< "$selected"
 
     echo ""
     echo "Selected:"
@@ -37,5 +37,5 @@ while true; do
     echo "$url"
 
     # Show action menu for the selected video
-    video_action_menu "$url"
+    video_action_menu "$title" "$url" "$channel_url"
 done

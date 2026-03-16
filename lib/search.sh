@@ -14,7 +14,7 @@ search() {
         # Fetch up to fetch_limit candidates; include video ID for de-duplication
         mapfile -t batch < <(
             yt-dlp "ytsearch${fetch_limit}:${query}" \
-                --print "%(id)s${DELIM}%(title)s${DELIM}%(webpage_url)s${DELIM}%(uploader)s${DELIM}%(view_count)s${DELIM}%(like_count)s${DELIM}%(comment_count)s${DELIM}%(duration_string)s" \
+                --print "%(id)s${DELIM}%(title)s${DELIM}%(webpage_url)s${DELIM}%(uploader)s${DELIM}%(channel_follower_count)s${DELIM}%(view_count)s${DELIM}%(like_count)s${DELIM}%(comment_count)s${DELIM}%(duration_string)s${DELIM}%(channel_url)s${DELIM}%(description)s${DELIM}%(tags)s" \
                 --no-warnings \
                 --ignore-errors 2>/dev/null
         )
@@ -23,7 +23,7 @@ search() {
             # Skip empty lines
             [ -z "$line" ] && continue
 
-            IFS=$'\t' read -r vid_id title url uploader views likes comments duration <<< "$line"
+            IFS=$'\t' read -r vid_id title url uploader subs views likes comments duration channel_url description tags <<< "$line"
 
             # Require at least an ID and URL to consider it valid
             if [ -z "$vid_id" ] || [ -z "$url" ]; then
@@ -37,7 +37,21 @@ search() {
 
             seen_ids["$vid_id"]=1
 
-            uniq_results+=("${title}${DELIM}${url}${DELIM}${uploader}${DELIM}${views}${DELIM}${likes}${DELIM}${comments}${DELIM}${duration}")
+            # Clean up fields that may contain newlines/tabs to keep TSV stable for fzf
+            description=${description//$'\t'/ }
+            description=${description//$'\r'/}
+            description=${description//$'\n'/ }
+            tags=${tags//$'\t'/ }
+            tags=${tags//$'\r'/}
+            tags=${tags//$'\n'/ }
+
+            # Create a short description snippet for preview
+            local desc_short="$description"
+            if [ ${#desc_short} -gt 240 ]; then
+                desc_short="${desc_short:0:237}..."
+            fi
+
+            uniq_results+=("${title}${DELIM}${url}${DELIM}${uploader}${DELIM}${subs}${DELIM}${views}${DELIM}${likes}${DELIM}${comments}${DELIM}${duration}${DELIM}${channel_url}${DELIM}${desc_short}${DELIM}${tags}")
 
             # Stop early if we've reached the target
             if (( ${#uniq_results[@]} >= target )); then
