@@ -1,41 +1,124 @@
 #!/bin/bash
+set -euo pipefail
 
-CONFIG="$HOME/.config/lightube.conf"
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-[ -f "$CONFIG" ] && source "$CONFIG"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+CONFIG="$CONFIG_DIR/lightube.conf"
 
-source "$(dirname "$0")/lib/search.sh"
-source "$(dirname "$0")/lib/menu.sh"
-source "$(dirname "$0")/lib/player.sh"
+default_config() {
+    cat <<'EOF'
+RESULTS=5
+MAX_RESOLUTION=1080
+PLAYER=mpv
+EOF
+}
 
-echo "Lightube - Terminal YouTube Player"
+ensure_config() {
+    mkdir -p "$CONFIG_DIR"
+    if [ ! -f "$CONFIG" ]; then
+        default_config > "$CONFIG"
+    fi
+}
 
-read -p "Search YouTube: " query
+load_config() {
+    ensure_config
+    # shellcheck disable=SC1090
+    source "$CONFIG"
+}
 
-echo ""
-echo "Fetching videos..."
-echo ""
+print_config() {
+    ensure_config
+    cat "$CONFIG"
+}
 
-mapfile -t results < <(search "$query")
+reset_config() {
+    ensure_config
+    default_config > "$CONFIG"
+    echo "Reset config at: $CONFIG"
+}
 
-if [ ${#results[@]} -eq 0 ]; then
-    echo "No results found."
-    exit
-fi
+edit_config() {
+    ensure_config
+    local editor="${EDITOR:-nano}"
+    "$editor" "$CONFIG"
+}
 
-while true; do
-    selected=$(printf "%s\n" "${results[@]}" | show_menu)
+usage() {
+    cat <<'EOF'
+Lightube - Terminal YouTube Player
 
-    # If user cancels the selection menu, exit
-    [ -z "$selected" ] && exit
+Commands:
+  lightube        Start search UI
+  lightube edit   Edit configuration
+  lightube config View current config
+  lightube reset  Reset config to default
+  lightube help   Show this help message
+EOF
+}
 
-    IFS=$'\t' read -r title url channel subs views likes comments duration channel_url desc_short tags <<< "$selected"
+run_ui() {
+    load_config
+
+    # shellcheck disable=SC1091
+    source "$APP_DIR/lib/search.sh"
+    # shellcheck disable=SC1091
+    source "$APP_DIR/lib/menu.sh"
+    # shellcheck disable=SC1091
+    source "$APP_DIR/lib/player.sh"
+
+    echo "Lightube - Terminal YouTube Player"
+    read -r -p "Search YouTube: " query
 
     echo ""
-    echo "Selected:"
-    echo "$title"
-    echo "$url"
+    echo "Fetching videos..."
+    echo ""
 
-    # Show action menu for the selected video
-    video_action_menu "$title" "$url" "$channel_url"
-done
+    mapfile -t results < <(search "$query")
+
+    if [ ${#results[@]} -eq 0 ]; then
+        echo "No results found."
+        exit 0
+    fi
+
+    while true; do
+        selected=$(printf "%s\n" "${results[@]}" | show_menu)
+
+        # If user cancels the selection menu, exit
+        [ -z "$selected" ] && exit 0
+
+        IFS=$'\t' read -r title url channel subs views likes comments duration channel_url desc_short tags <<< "$selected"
+
+        echo ""
+        echo "Selected:"
+        echo "$title"
+        echo "$url"
+
+        video_action_menu "$title" "$url" "$channel_url"
+    done
+}
+
+cmd="${1:-}"
+case "$cmd" in
+    "" )
+        run_ui
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    edit)
+        edit_config
+        ;;
+    config)
+        print_config
+        ;;
+    reset)
+        reset_config
+        ;;
+    *)
+        echo "Unknown command: $cmd" >&2
+        echo "" >&2
+        usage >&2
+        exit 1
+        ;;
+esac

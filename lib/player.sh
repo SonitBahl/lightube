@@ -1,8 +1,9 @@
 play_video() {
     local url="$1"
     local max_res="${MAX_RESOLUTION:-720}"
+    local player="${PLAYER:-mpv}"
 
-    mpv --ytdl-format="bestvideo[vcodec^=avc1][height<=${max_res}]+bestaudio/best" \
+    "$player" --ytdl-format="bestvideo[vcodec^=avc1][height<=${max_res}]+bestaudio/best" \
         --quiet \
         "$url"
 }
