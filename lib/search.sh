@@ -3,20 +3,22 @@ search() {
     local target="${RESULTS:-5}"
     local fetch_limit="$target"
     local DELIM=$'\t'
-    local -a uniq_results batch
-    local -A seen_ids
+    local -a uniq_results=()
+    local -a batch=()
+    local -A seen_ids=()
     local iter=0
     local max_iterations=5
 
     while (( ${#uniq_results[@]} < target && iter < max_iterations )); do
-        ((iter++))
+        ((++iter))
 
         # Fetch up to fetch_limit candidates; include video ID for de-duplication
         mapfile -t batch < <(
             yt-dlp "ytsearch${fetch_limit}:${query}" \
+                --replace-in-metadata "description" "[\r\n\t]" " " \
                 --print "%(id)s${DELIM}%(title)s${DELIM}%(webpage_url)s${DELIM}%(uploader)s${DELIM}%(channel_follower_count)s${DELIM}%(view_count)s${DELIM}%(like_count)s${DELIM}%(comment_count)s${DELIM}%(duration_string)s${DELIM}%(channel_url)s${DELIM}%(description)s${DELIM}%(tags)s" \
                 --no-warnings \
-                --ignore-errors 2>/dev/null
+                --ignore-errors 2>/dev/null || true
         )
 
         for line in "${batch[@]}"; do
@@ -31,7 +33,7 @@ search() {
             fi
 
             # Skip duplicates by video ID
-            if [[ -n "${seen_ids[$vid_id]}" ]]; then
+            if [[ -n "${seen_ids[$vid_id]-}" ]]; then
                 continue
             fi
 
